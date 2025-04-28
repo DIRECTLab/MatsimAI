@@ -34,7 +34,7 @@ def main(args):
         for key, val in args.__dict__.items():
             f.write(f"{key}:{val}\n")
         f.write(f"num_nodes:{dataset.target_graph.num_nodes}\n")
-        f.write(f"num_nodes:{dataset.target_graph.num_edges}\n")
+        f.write(f"num_edges:{dataset.target_graph.num_edges}\n")
 
     Z_2 = args.num_clusters**2
     TAM = torch.from_numpy(dataset.TAM).to(device).to(torch.float32)
