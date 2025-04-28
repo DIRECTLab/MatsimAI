@@ -1,3 +1,25 @@
+# MATSIMAI
+
+## Project Setup
+
+Make sure you have conda and maven installed and then to setup the project run
+
+```
+cd matsimAI
+./setup_project.sh
+```
+
+This compiles the java code, and creates a new python environment in conda, to activate 
+the python environment run
+
+```
+conda activate matsimAIenv
+```
+
+
+
+
+
 # matsim-example-project
 
 A small example of how to use MATSim as a library.

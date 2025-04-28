@@ -24,3 +24,9 @@ hs_err_pid*
 # IntelliJ
 /.idea/
 *.iml
+
+*.vscode
+
+*.cpp
+*.so
+*.o
