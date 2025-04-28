@@ -9,3 +9,7 @@ matsimAI.egg-info/SOURCES.txt
 matsimAI.egg-info/dependency_links.txt
 matsimAI.egg-info/top_level.txt
 matsimAI/cython/__init__.py
+matsimAI/notebooks/__init__.py
+matsimAI/scripts/__init__.py
+matsimAI/scripts/clean_osm_data.py
+matsimAI/scripts/create_population.py

@@ -20,10 +20,6 @@ def main(args):
 
     writer = SummaryWriter(tensorboard_path)
 
-    with open(Path(save_path, "args.txt"), "w") as f:
-        for key, val in args.__dict__.items():
-            f.write(f"{key}:{val}\n")
-
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
@@ -33,6 +29,12 @@ def main(args):
     with open(Path(save_path, "sensor_ids.txt"), "w") as f:
         for sensor_idx in dataset.sensor_idxs:
             f.write(f"{dataset.edge_mapping.inv[sensor_idx]},")
+    
+    with open(Path(save_path, "args.txt"), "w") as f:
+        for key, val in args.__dict__.items():
+            f.write(f"{key}:{val}\n")
+        f.write(f"num_nodes:{dataset.target_graph.num_nodes}\n")
+        f.write(f"num_nodes:{dataset.target_graph.num_edges}\n")
 
     Z_2 = args.num_clusters**2
     TAM = torch.from_numpy(dataset.TAM).to(device).to(torch.float32)
@@ -87,6 +89,12 @@ def main(args):
             best_model.reshape(args.num_clusters, args.num_clusters, 24),
             Path(save_path, "best_plans.xml")
         )
+    
+    if args.best_plans_save_path is not None:
+        dataset.save_plans_from_flow_res(
+            best_model.reshape(args.num_clusters, args.num_clusters, 24),
+            Path(args.best_plans_save_path, "best_plans.xml")
+        )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -98,6 +106,8 @@ if __name__ == "__main__":
     parser.add_argument("--training_steps", type=int, required=True, help="number of training iterations")
     parser.add_argument("--log_interval", type=int, required=True, help="tensorboard logging interval")
     parser.add_argument("--save_interval", type=int, required=True, help="model save interval")
+    parser.add_argument("--best_plans_save_path", type=str, default=None, help="addtional path to save the best plans, helpful for\
+                        automating matsim runs")
 
     args = parser.parse_args()
     main(args)

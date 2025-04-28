@@ -2,7 +2,9 @@
 
 ## Project Setup
 
-Make sure you have conda and maven installed and then to setup the project run
+Make sure you have conda and maven installed. Then to setup the project, change the cuda version to your
+version (you can check by running nvidia-smi) and then run the following script, if you don't have a gpu then
+don't worry about setting the cuda version.
 
 ```
 cd matsimAI
@@ -73,26 +75,18 @@ Once you're satisfied with the network, save it by going to **File → Save As**
 
 ## Cleaning the .osm File
 
-Use the script provided in `python/scripts/` named `clean_osm_data.py` to clean the `.osm` file. An example of how to run the script:
+Use the script provided in `matsimAI/scripts/` named `clean_osm_data.py` to clean the `.osm` file. An example of how to run the script:
 
 ```bash
-python python/scripts/clean_osm_data.py --input path/to/input_graph.osm --output path/to/cleaned_graph.osm
+python -m matsimAI.scripts.clean_osm_data /path/to/osm/data /path/to/output/osm
 ```
 
 The cleaned `.osm` file can now be converted to a MATSim-compatible `.xml` file.
 
 ## Converting .osm to MATSim-Compatible .xml
 
-Use the [osm2matsim converter](https://github.com/gustavocovas/osm2matsim), included in this repository at `/osm2matsim`. Place your `.osm` file in the `osm2matsim/input` directory for simplicity. To convert:
-
-```bash
-cd osm2matsim
-./bin/convert.sh input/input.osm output/output.xml
-```
-
-
-
-
+We've modified the [osm2matsim converter](https://github.com/gustavocovas/osm2matsim), to be able to add sensors while parsing
+the network. Its located at `src/main/java/org/matsim/osm2matsim/GetNetworkAndSensors.java`. The script provided at `/scripts/osm2matsim.sh` provides an example on its usage.
 
 # matsim-example-project
 

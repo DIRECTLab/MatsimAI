@@ -31,5 +31,7 @@ hs_err_pid*
 *.so
 *.o
 
-/results/
-/__pycache__/
+*results*
+*__pycache__*
+*cluster_scenarios*
+*outputs*
