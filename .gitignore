@@ -30,3 +30,6 @@ hs_err_pid*
 *.cpp
 *.so
 *.o
+
+/results/
+/__pycache__/
