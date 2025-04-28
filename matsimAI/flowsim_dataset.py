@@ -8,7 +8,7 @@ from sklearn.cluster import KMeans
 import os
 import random
 from tqdm import tqdm
-from evsim.gradient_flow_matching.cython.get_TAM import get_TAM
+from matsimAI.cython.get_TAM import get_TAM
 from sklearn.metrics import pairwise_distances_argmin
 
 class FlowSimDataset:
