@@ -35,6 +35,7 @@ def main(args):
             f.write(f"{key}:{val}\n")
         f.write(f"num_nodes:{dataset.target_graph.num_nodes}\n")
         f.write(f"num_edges:{dataset.target_graph.num_edges}\n")
+        f.write(f"num_sensors:{len(sensor_idxs)}\n")
 
     Z_2 = args.num_clusters**2
     TAM = torch.from_numpy(dataset.TAM).to(device).to(torch.float32)

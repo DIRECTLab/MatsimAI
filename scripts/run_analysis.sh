@@ -20,3 +20,9 @@ python3 -m matsimAI.scripts.analysis \
 "./scenarios/cluster_scenarios/utah_100c/utahnetwork.xml" \
 "./scenarios/cluster_scenarios/utah_100c/utahcounts.xml" \
 "./outputs/output_100c" \
+
+python3 -m matsimAI.scripts.analysis \
+"./cluster_results/results/0428175625_nclusters_200_utahnetwork" \
+"./scenarios/cluster_scenarios/utah_200c/utahnetwork.xml" \
+"./scenarios/cluster_scenarios/utah_200c/utahcounts.xml" \
+"./outputs/output_200c" \

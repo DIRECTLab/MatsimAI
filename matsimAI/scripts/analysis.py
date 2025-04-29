@@ -12,6 +12,8 @@ import matplotlib.colors as mcolors
 import itertools
 import seaborn as sns
 from tbparse import SummaryReader
+import matplotlib.gridspec as gridspec
+from tqdm import tqdm
 
 from matsimAI.flowsim_dataset import FlowSimDataset
 
@@ -125,6 +127,95 @@ def load_clusters(cluster_path, dataset):
             clusters[key] = vals
     return clusters
 
+def build_abs_diff_graph(dataset, link_flows, sensor_idxs, target_flows, hour, title, save_path):
+    hour_idx = hour
+    hour_val = hour + 1
+    G_sensor = nx.Graph()
+    # Add edges with full attributes
+    for i in range(dataset.target_graph.num_edges):
+        u, v = dataset.target_graph.edge_index[0][i].item(), dataset.target_graph.edge_index[1][i].item()
+        
+        if i in sensor_idxs:
+            if isinstance(link_flows, torch.Tensor):
+                target_flow = target_flows[i][hour_idx].item()
+                pred_flow = link_flows[i][hour_idx].item()
+
+                abs_diff = abs(target_flow - pred_flow)
+
+                G_sensor.add_edge(u, v, **{'Absolute Difference':abs_diff})
+            elif isinstance(link_flows, pd.DataFrame):
+                link_id = int(dataset.edge_mapping.inv[i])
+                df_row = link_flows[(link_flows['Link Id'] == link_id) & (link_flows['Hour'] == hour_val)].iloc[0]
+                target_flow = df_row['Count volumes']
+                pred_flow = df_row['MATSIM volumes']
+                abs_diff = abs(target_flow - pred_flow)
+                attributes = df_row.to_dict()
+                G_sensor.add_edge(u, v, **{'Absolute Difference':abs_diff})
+            else:
+                raise ValueError("link_flows must be either a torch.Tensor or a pd.DataFrame")
+        else:
+            G_sensor.add_edge(u, v)
+
+    # Prepare plotting
+    fig = plt.figure(figsize=(8, 8))
+    gs = gridspec.GridSpec(1, 5, width_ratios=[50, -15, 1.5, 0.0, 10])  # wider graph area
+
+    ax_graph = fig.add_subplot(gs[0])  # Main graph
+    ax_hist = fig.add_subplot(gs[4])  # Histogram
+
+    # Get positions for nodes
+    pos = {i: (dataset.target_graph.pos[i][0].item(), dataset.target_graph.pos[i][1].item()) for i in range(len(dataset.target_graph.pos))}
+
+    # Separate edges
+    edges_with_sensor = [(u, v) for u, v in G_sensor.edges() if 'Absolute Difference' in G_sensor[u][v]]
+    edges_without_sensor = [(u, v) for u, v in G_sensor.edges() if 'Absolute Difference' not in G_sensor[u][v]]
+
+    # Extract weights
+    weights = [G_sensor[u][v]['Absolute Difference'] for u, v in edges_with_sensor]
+    if len(weights) == 0:
+        weights = [0]
+
+    # Normalize weights
+    norm = mcolors.Normalize(vmin=min(weights), vmax=max(weights))
+    cmap = plt.cm.RdYlGn.reversed()
+    edge_colors_sensor = [cmap(norm(weight)) for weight in weights]
+
+    # Draw graph
+    nx.draw_networkx_edges(G_sensor, pos, edgelist=edges_with_sensor, edge_color=edge_colors_sensor, width=20, ax=ax_graph)
+    nx.draw_networkx_edges(G_sensor, pos, edgelist=edges_with_sensor, edge_color='black', width=1, ax=ax_graph)
+    nx.draw_networkx_edges(G_sensor, pos, edgelist=edges_without_sensor, edge_color='black', width=1, ax=ax_graph)
+    nx.draw_networkx_nodes(G_sensor, pos, node_size=1, node_color='black', ax=ax_graph)
+
+    ax_graph.set_xlabel("X Coordinate")
+    ax_graph.set_ylabel("Y Coordinate")
+    ax_graph.set_axis_off()
+    ax_graph.set_title(title)
+
+    # Histogram
+    hist_vals, bins = np.histogram(weights, bins=20)
+    bar_centers = (bins[:-1] + bins[1:]) / 2
+    bar_heights = hist_vals
+    bar_width = (bins[1] - bins[0]) * 0.9
+
+    # Map bin centers to colors
+    bin_centers = (bins[:-1] + bins[1:]) / 2  # middle of each bin
+    colors = [cmap(norm(center)) for center in bin_centers]
+
+    ax_hist.barh(bar_centers, bar_heights, height=bar_width, align='center', color=colors, edgecolor='black')
+
+    # Add count labels at the top of each bar
+    for count, center in zip(bar_heights, bar_centers):
+        ax_hist.text(count + 1, center, str(count), va='center', ha='left', fontsize=8)
+
+    ax_hist.set_xlabel('Count')
+    ax_hist.set_ylabel('')
+
+    # Adjust layout
+    plt.tight_layout()
+    plt.title("Absolute Difference \n of Sensor Flows")
+    plt.savefig(save_path)
+    plt.close()
+
 
 def main(args):
     results_path = Path(args.results_path)
@@ -166,6 +257,22 @@ def main(args):
     clusters = load_clusters(results_path / "clusters.txt", dataset)
     plot_clusters(dataset, clusters, save_dir / "network_clusters.png")
 
+
+    gradient_abs_diff_path = Path(save_dir, "gradient_abs_diff")
+    gradient_abs_diff_path.mkdir(exist_ok=True)
+
+    simulation_abs_diff_path = Path(save_dir, "simulation_abs_diff")
+    simulation_abs_diff_path.mkdir(exist_ok=True)
+
+    for hour in tqdm(range(24), desc="Creating Absolute Difference Graphs"):
+        build_abs_diff_graph(dataset, link_flows, sensor_idxs, target_flows, hour,
+                        f"Absolute Difference of Gradient Sensor Flows at Hour {hour+1}",
+                        gradient_abs_diff_path / f"abs_diff_graph_hour_{hour+1}.png")
+
+        link_flows_df = pd.read_csv(Path(last_iteration_path, f"{last_iter}.countscompare.txt"), sep="\t")
+        build_abs_diff_graph(dataset, link_flows_df, sensor_idxs, target_flows, hour,
+                        f"Absolute Difference of Simulation Sensor Flows at Hour {hour+1}",
+                        simulation_abs_diff_path / f"abs_diff_graph_hour_{hour+1}.png")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analyze FlowSim results.")
