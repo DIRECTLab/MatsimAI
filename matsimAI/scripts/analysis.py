@@ -127,6 +127,131 @@ def load_clusters(cluster_path, dataset):
             clusters[key] = vals
     return clusters
 
+def create_html_plot(G_sensor, G_normal, dataset, df, hour_count):
+    
+    from bokeh.plotting import figure, output_file, save
+    from bokeh.plotting import figure, show
+    from bokeh.models import ColumnDataSource, LinearColorMapper, ColorBar, HoverTool, CustomJS, Select
+    from bokeh.layouts import row, column
+    from bokeh.io import output_notebook
+    # output_notebook()
+
+    # Positions
+    pos = {i: (dataset.target_graph.pos[i][0].item(), dataset.target_graph.pos[i][1].item()) for i in range(len(dataset.target_graph.pos))}
+
+    # Build Bokeh Data Source
+    edge_start = []
+    edge_end = []
+    x0s, y0s, x1s, y1s = [], [], [], []
+    weight_all_hours = []
+    other_attr_all_hours = {col: [] for col in df.columns if col != 'Link Id'}
+
+    print("Loop Sensor Edges:", G_sensor.edges(data=True))
+    for (u, v, data) in tqdm(G_sensor.edges(data=True), desc="Processing Sensor Edges", total=len(G_sensor.edges)):
+        edge_start.append(u)
+        edge_end.append(v)
+        x0, y0 = pos[u]
+        x1, y1 = pos[v]
+        x0s.append(x0)
+        y0s.append(y0)
+        x1s.append(x1)
+        y1s.append(y1)
+        
+        # For each attribute across hours
+        weights = []
+        attr_columns = {col: [] for col in df.columns if col != 'Link Id'}
+        if not 'all_attrs' in data:
+            continue
+        for hour_attr in data['all_attrs']:
+            if hour_attr:  # if exists
+                weights.append(hour_attr['Normalized Relative Error'])
+                for col in attr_columns:
+                    attr_columns[col].append(hour_attr[col])
+            else:
+                weights.append(0)
+                for col in attr_columns:
+                    attr_columns[col].append(0)
+        
+        weight_all_hours.append(weights)
+        for col in attr_columns:
+            other_attr_all_hours[col].append(attr_columns[col])
+
+    # Create ColumnDataSource
+    sensors_edge_source = ColumnDataSource(data=dict(
+        x0=x0s, y0=y0s, x1=x1s, y1=y1s,
+        weight=[w[0] for w in weight_all_hours],  # Initially hour 0
+        weight_all_hours=weight_all_hours,
+        **{col: [other_attr_all_hours[col][i][0] for i in range(len(edge_start))] for col in other_attr_all_hours},
+        **{f"{col}_all_hours": other_attr_all_hours[col] for col in other_attr_all_hours}
+    ))
+    normal_edge_source = ColumnDataSource(data=dict(
+        x0=[pos[u][0] for u, v in G_normal.edges()],
+        y0=[pos[u][1] for u, v in G_normal.edges()],
+        x1=[pos[v][0] for u, v in G_normal.edges()],
+        y1=[pos[v][1] for u, v in G_normal.edges()],
+    ))
+
+    # === CREATE FIGURE ===
+
+    color_mapper = LinearColorMapper(palette="RdYlGn11", low=0, high=1)
+
+    # plot = figure(title="Normalized Relative Error", width=800, height=600, tools="pan,wheel_zoom,box_zoom,reset,save")
+    plot = figure(title="Normalized Relative Error", width=800, height=600, tools="pan,wheel_zoom,box_zoom,reset,save")
+
+    # Draw edges for sensors
+    plot.segment('x0', 'y0', 'x1', 'y1', source=sensors_edge_source,
+                line_width=10, color={'field': 'weight', 'transform': color_mapper})
+    # # Draw edges for normal
+    plot.segment('x0', 'y0', 'x1', 'y1', source=sensors_edge_source,
+                line_width=1, color="black")
+    plot.segment('x0', 'y0', 'x1', 'y1', source=normal_edge_source,
+                line_width=1, color="black")
+    # Draw nodes
+    node_x = [pos[i][0] for i in pos]
+    node_y = [pos[i][1] for i in pos]
+    plot.scatter(node_x, node_y, size=5, color="black", alpha=0.2)
+
+    # Add hover tool
+    tooltips = [(col, f"@{{{col}}}") for col in df.columns if col != 'Link Id']
+    tooltips.insert(0, ("Weight", "@weight"))
+
+    hover = HoverTool(tooltips=tooltips)
+    plot.add_tools(hover)
+
+    # Colorbar
+    color_bar = ColorBar(color_mapper=color_mapper, location=(0,0))
+    plot.add_layout(color_bar, 'right')
+
+    # === CREATE DROPDOWN TO SELECT HOUR ===
+
+    fields = [col for col in df.columns if col != 'Link Id']
+
+    hour_selector = Select(title="Select Hour", value="1", options=[str(i+1) for i in range(hour_count)])
+
+    callback = CustomJS(args=dict(source=sensors_edge_source, hour_selector=hour_selector), code=f"""
+        var data = source.data;
+        var hour = parseInt(hour_selector.value-1);
+        var n = data['weight_all_hours'].length;
+
+        for (var i = 0; i < n; i++) {{
+            data['weight'][i] = data['weight_all_hours'][i][hour];
+            {"".join([f"data['{field}'][i] = data['{field}_all_hours'][i][hour];" for field in fields])}
+        }}
+        source.change.emit();
+    """)
+
+    hour_selector.js_on_change('value', callback)
+
+    # === LAYOUT AND SHOW ===
+
+    layout = column(row(plot, hour_selector))
+    show(layout)
+
+    # Save the plot as an HTML file
+    save(layout)
+
+    print("Plot saved as 'sensor_edges_graph.html'")
+
 def build_abs_diff_graph(dataset, link_flows, sensor_idxs, target_flows, hour, title, save_path):
     hour_idx = hour
     hour_val = hour + 1
