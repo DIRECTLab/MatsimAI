@@ -9,7 +9,7 @@ conda create -n matsimAIenv python=3.10 -y
 conda activate matsimAIenv
 
 # Install core Python libraries
-conda install -c conda-forge pandas numpy matplotlib tqdm bidict tensorboard rich osmnx cython seaborn bs4 -y
+conda install -c conda-forge pandas numpy matplotlib tqdm bidict tensorboard rich osmnx cython seaborn bs4 bokeh -y
 
 # Install local package
 pip install -e .

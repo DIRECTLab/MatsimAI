@@ -1,5 +1,5 @@
 eval "$(conda shell.bash hook)"
-conda activate matsimenv
+conda activate matsimAIenv
 
 cd ..
 

@@ -14,6 +14,12 @@ import seaborn as sns
 from tbparse import SummaryReader
 import matplotlib.gridspec as gridspec
 from tqdm import tqdm
+from bokeh.plotting import figure, output_file, save
+from bokeh.plotting import figure, show
+from bokeh.models import ColumnDataSource, LinearColorMapper, ColorBar, HoverTool, CustomJS, Select
+from bokeh.layouts import row, column
+from bokeh.io import output_notebook
+from bokeh.palettes import RdYlGn11
 
 from matsimAI.flowsim_dataset import FlowSimDataset
 
@@ -127,130 +133,144 @@ def load_clusters(cluster_path, dataset):
             clusters[key] = vals
     return clusters
 
-def create_html_plot(G_sensor, G_normal, dataset, df, hour_count):
-    
-    from bokeh.plotting import figure, output_file, save
-    from bokeh.plotting import figure, show
-    from bokeh.models import ColumnDataSource, LinearColorMapper, ColorBar, HoverTool, CustomJS, Select
-    from bokeh.layouts import row, column
-    from bokeh.io import output_notebook
-    # output_notebook()
-
-    # Positions
+def create_html_plot(dataset, link_flows, hour_count, title, output_html_path="sensor_edges_graph.html"):
+    sensor_idxs = dataset.sensor_idxs
+    target_flows = dataset.target_graph.edge_attr
     pos = {i: (dataset.target_graph.pos[i][0].item(), dataset.target_graph.pos[i][1].item()) for i in range(len(dataset.target_graph.pos))}
 
-    # Build Bokeh Data Source
-    edge_start = []
-    edge_end = []
-    x0s, y0s, x1s, y1s = [], [], [], []
-    weight_all_hours = []
-    other_attr_all_hours = {col: [] for col in df.columns if col != 'Link Id'}
+    G_sensor = nx.Graph()
 
-    print("Loop Sensor Edges:", G_sensor.edges(data=True))
-    for (u, v, data) in tqdm(G_sensor.edges(data=True), desc="Processing Sensor Edges", total=len(G_sensor.edges)):
-        edge_start.append(u)
-        edge_end.append(v)
+    for i in range(dataset.target_graph.num_edges):
+        u, v = dataset.target_graph.edge_index[0][i].item(), dataset.target_graph.edge_index[1][i].item()
+        
+        if i in sensor_idxs:
+            edge_attrs = {"Absolute Difference": [], "Predicted Flow": [], "Target Flow": []}
+
+            for hour_idx in range(hour_count):
+                if isinstance(link_flows, torch.Tensor):
+                    target_flow = target_flows[i][hour_idx].item()
+                    pred_flow = link_flows[i][hour_idx].item()
+                elif isinstance(link_flows, pd.DataFrame):
+                    link_id = int(dataset.edge_mapping.inv[i])
+                    df_row = link_flows[(link_flows['Link Id'] == link_id) & (link_flows['Hour'] == (hour_idx+1))].iloc[0]
+                    target_flow = df_row['Count volumes']
+                    pred_flow = df_row['MATSIM volumes']
+                else:
+                    raise ValueError("link_flows must be either a torch.Tensor or a pd.DataFrame")
+
+                abs_diff = abs(target_flow - pred_flow)
+
+                edge_attrs["Absolute Difference"].append(abs_diff)
+                edge_attrs["Predicted Flow"].append(pred_flow)
+                edge_attrs["Target Flow"].append(target_flow)
+
+            G_sensor.add_edge(u, v, **edge_attrs)
+        else:
+            G_sensor.add_edge(u, v)
+
+    # Compute max absolute difference for each hour
+    max_abs_diff_per_hour = [0] * hour_count
+    for hour_idx in range(hour_count):
+        max_abs_diff_per_hour[hour_idx] = max(
+            [max([data["Absolute Difference"][hour_idx] for u, v, data in G_sensor.edges(data=True) if "Absolute Difference" in data], default=0)],
+            default=1e-6  # avoid zero division
+        )
+
+    # Build plot data
+    sensor_edges = []
+    normal_edges = []
+    weight_all_hours, pred_all_hours, target_all_hours = [], [], []
+
+    for (u, v, data) in tqdm(G_sensor.edges(data=True), desc="Processing Sensor Edges"):
+        if "Absolute Difference" in data:
+            sensor_edges.append((u, v, data))
+        else:
+            normal_edges.append((u, v))
+
+    # Sensor edges (colored)
+    s_x0s, s_y0s, s_x1s, s_y1s = [], [], [], []
+    for (u, v, data) in sensor_edges:
         x0, y0 = pos[u]
         x1, y1 = pos[v]
-        x0s.append(x0)
-        y0s.append(y0)
-        x1s.append(x1)
-        y1s.append(y1)
+        s_x0s.append(x0)
+        s_y0s.append(y0)
+        s_x1s.append(x1)
+        s_y1s.append(y1)
         
-        # For each attribute across hours
-        weights = []
-        attr_columns = {col: [] for col in df.columns if col != 'Link Id'}
-        if not 'all_attrs' in data:
-            continue
-        for hour_attr in data['all_attrs']:
-            if hour_attr:  # if exists
-                weights.append(hour_attr['Normalized Relative Error'])
-                for col in attr_columns:
-                    attr_columns[col].append(hour_attr[col])
-            else:
-                weights.append(0)
-                for col in attr_columns:
-                    attr_columns[col].append(0)
-        
-        weight_all_hours.append(weights)
-        for col in attr_columns:
-            other_attr_all_hours[col].append(attr_columns[col])
+        weight_all_hours.append(data["Absolute Difference"])
+        pred_all_hours.append(data["Predicted Flow"])
+        target_all_hours.append(data["Target Flow"])
 
-    # Create ColumnDataSource
     sensors_edge_source = ColumnDataSource(data=dict(
-        x0=x0s, y0=y0s, x1=x1s, y1=y1s,
-        weight=[w[0] for w in weight_all_hours],  # Initially hour 0
+        x0=s_x0s, y0=s_y0s, x1=s_x1s, y1=s_y1s,
+        weight=[w[0] for w in weight_all_hours],
+        predicted=[p[0] for p in pred_all_hours],
+        target=[t[0] for t in target_all_hours],
         weight_all_hours=weight_all_hours,
-        **{col: [other_attr_all_hours[col][i][0] for i in range(len(edge_start))] for col in other_attr_all_hours},
-        **{f"{col}_all_hours": other_attr_all_hours[col] for col in other_attr_all_hours}
+        predicted_all_hours=pred_all_hours,
+        target_all_hours=target_all_hours,
     ))
+
+    # Normal edges (black)
+    n_x0s, n_y0s, n_x1s, n_y1s = [], [], [], []
+    for (u, v) in normal_edges:
+        x0, y0 = pos[u]
+        x1, y1 = pos[v]
+        n_x0s.append(x0)
+        n_y0s.append(y0)
+        n_x1s.append(x1)
+        n_y1s.append(y1)
+
     normal_edge_source = ColumnDataSource(data=dict(
-        x0=[pos[u][0] for u, v in G_normal.edges()],
-        y0=[pos[u][1] for u, v in G_normal.edges()],
-        x1=[pos[v][0] for u, v in G_normal.edges()],
-        y1=[pos[v][1] for u, v in G_normal.edges()],
+        x0=n_x0s, y0=n_y0s, x1=n_x1s, y1=n_y1s,
     ))
 
-    # === CREATE FIGURE ===
+    # Create Bokeh figure
+    plot = figure(title="Absolute Flow Difference", width=800, height=600, tools="pan,wheel_zoom,box_zoom,reset,save")
 
-    color_mapper = LinearColorMapper(palette="RdYlGn11", low=0, high=1)
+    # Loop through each hour to create a color mapper per hour
+    for hour_idx in range(hour_count):
+        # Color mapper for each hour
+        color_mapper = LinearColorMapper(palette=RdYlGn11, low=0, high=max_abs_diff_per_hour[hour_idx])
 
-    # plot = figure(title="Normalized Relative Error", width=800, height=600, tools="pan,wheel_zoom,box_zoom,reset,save")
-    plot = figure(title="Normalized Relative Error", width=800, height=600, tools="pan,wheel_zoom,box_zoom,reset,save")
+        # Draw sensor edges with color
+        plot.segment('x0', 'y0', 'x1', 'y1', source=sensors_edge_source,
+                     line_width=10, color={'field': 'weight', 'transform': color_mapper})
 
-    # Draw edges for sensors
-    plot.segment('x0', 'y0', 'x1', 'y1', source=sensors_edge_source,
-                line_width=10, color={'field': 'weight', 'transform': color_mapper})
-    # # Draw edges for normal
-    plot.segment('x0', 'y0', 'x1', 'y1', source=sensors_edge_source,
-                line_width=1, color="black")
+    # Draw normal edges in black
     plot.segment('x0', 'y0', 'x1', 'y1', source=normal_edge_source,
-                line_width=1, color="black")
+                 line_width=1, color="black")
+
     # Draw nodes
     node_x = [pos[i][0] for i in pos]
     node_y = [pos[i][1] for i in pos]
-    plot.scatter(node_x, node_y, size=5, color="black", alpha=0.2)
+    plot.scatter(node_x, node_y, size=.001, color="black", alpha=0.2)
 
-    # Add hover tool
-    tooltips = [(col, f"@{{{col}}}") for col in df.columns if col != 'Link Id']
-    tooltips.insert(0, ("Weight", "@weight"))
-
+    # Hover tool
+    tooltips = [("Abs Diff", "@weight"), ("Predicted", "@predicted"), ("Target", "@target")]
     hover = HoverTool(tooltips=tooltips)
     plot.add_tools(hover)
 
     # Colorbar
-    color_bar = ColorBar(color_mapper=color_mapper, location=(0,0))
+    color_bar = ColorBar(color_mapper=color_mapper, location=(0, 0))
     plot.add_layout(color_bar, 'right')
 
-    # === CREATE DROPDOWN TO SELECT HOUR ===
-
-    fields = [col for col in df.columns if col != 'Link Id']
-
-    hour_selector = Select(title="Select Hour", value="1", options=[str(i+1) for i in range(hour_count)])
-
-    callback = CustomJS(args=dict(source=sensors_edge_source, hour_selector=hour_selector), code=f"""
-        var data = source.data;
-        var hour = parseInt(hour_selector.value-1);
-        var n = data['weight_all_hours'].length;
-
-        for (var i = 0; i < n; i++) {{
+    # Dropdown for hour selection
+    hour_selector = Select(title="Select Hour", value="0", options=[str(i) for i in range(hour_count)])
+    callback = CustomJS(args=dict(source=sensors_edge_source, hour_selector=hour_selector), code="""
+        const hour = parseInt(hour_selector.value);
+        const data = source.data;
+        for (let i = 0; i < data['weight_all_hours'].length; i++) {
             data['weight'][i] = data['weight_all_hours'][i][hour];
-            {"".join([f"data['{field}'][i] = data['{field}_all_hours'][i][hour];" for field in fields])}
-        }}
+            data['predicted'][i] = data['predicted_all_hours'][i][hour];
+            data['target'][i] = data['target_all_hours'][i][hour];
+        }
         source.change.emit();
     """)
-
     hour_selector.js_on_change('value', callback)
 
-    # === LAYOUT AND SHOW ===
-
     layout = column(row(plot, hour_selector))
-    show(layout)
-
-    # Save the plot as an HTML file
-    save(layout)
-
-    print("Plot saved as 'sensor_edges_graph.html'")
+    save(layout, filename=output_html_path, title=title)
 
 def build_abs_diff_graph(dataset, link_flows, sensor_idxs, target_flows, hour, title, save_path):
     hour_idx = hour
@@ -267,15 +287,14 @@ def build_abs_diff_graph(dataset, link_flows, sensor_idxs, target_flows, hour, t
 
                 abs_diff = abs(target_flow - pred_flow)
 
-                G_sensor.add_edge(u, v, **{'Absolute Difference':abs_diff})
+                G_sensor.add_edge(u, v, **{'Absolute Difference':abs_diff, 'Predicted Flow': pred_flow, 'Target Flow': target_flow})
             elif isinstance(link_flows, pd.DataFrame):
                 link_id = int(dataset.edge_mapping.inv[i])
                 df_row = link_flows[(link_flows['Link Id'] == link_id) & (link_flows['Hour'] == hour_val)].iloc[0]
                 target_flow = df_row['Count volumes']
                 pred_flow = df_row['MATSIM volumes']
                 abs_diff = abs(target_flow - pred_flow)
-                attributes = df_row.to_dict()
-                G_sensor.add_edge(u, v, **{'Absolute Difference':abs_diff})
+                G_sensor.add_edge(u, v, **{'Absolute Difference':abs_diff, 'Predicted Flow': pred_flow, 'Target Flow': target_flow})
             else:
                 raise ValueError("link_flows must be either a torch.Tensor or a pd.DataFrame")
         else:
@@ -389,15 +408,17 @@ def main(args):
     simulation_abs_diff_path = Path(save_dir, "simulation_abs_diff")
     simulation_abs_diff_path.mkdir(exist_ok=True)
 
+    link_flows_df = pd.read_csv(Path(last_iteration_path, f"{last_iter}.countscompare.txt"), sep="\t")
     for hour in tqdm(range(24), desc="Creating Absolute Difference Graphs"):
         build_abs_diff_graph(dataset, link_flows, sensor_idxs, target_flows, hour,
                         f"Absolute Difference of Gradient Sensor Flows at Hour {hour+1}",
                         gradient_abs_diff_path / f"abs_diff_graph_hour_{hour+1}.png")
 
-        link_flows_df = pd.read_csv(Path(last_iteration_path, f"{last_iter}.countscompare.txt"), sep="\t")
         build_abs_diff_graph(dataset, link_flows_df, sensor_idxs, target_flows, hour,
                         f"Absolute Difference of Simulation Sensor Flows at Hour {hour+1}",
                         simulation_abs_diff_path / f"abs_diff_graph_hour_{hour+1}.png")
+    create_html_plot(dataset, link_flows, 24, "Gradient Results", Path(save_dir, "gradient_results.html"))
+    create_html_plot(dataset, link_flows_df, 24, "Simulation Results", Path(save_dir, "simulation_results.html"))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analyze FlowSim results.")
