@@ -13,6 +13,7 @@ conda install -c conda-forge pandas numpy matplotlib tqdm bidict tensorboard ric
 
 # Install local package
 pip install -e .
+pip install tbparse
 
 # Check if a GPU is available using nvidia-smi
 if nvidia-smi &> /dev/null; then
