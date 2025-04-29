@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="description" content="A framework for scalable Traffic Flow Digital Twin development using MATSim.">
+    <meta name="keywords" content="Digital Twin, MATSim, Traffic Simulation, OD Estimation, AI, Traffic Flow">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <title>Scalable Traffic Flow Digital Twins with MATSim</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="./static/css/bulma.min.css">
+    <link rel="stylesheet" href="./static/css/index.css">
+    <link rel="icon" href="./static/images/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    
+    <!-- jQuery Library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+
+<!-- Navigation Bar -->
+<nav class="navbar">
+    <div class="navbar-brand">
+        <a role="button" class="navbar-burger">
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+        </a>
+    </div>
+    <div class="navbar-menu">
+        <div class="navbar-start" style="flex-grow: 1; justify-content: center;">
+            <a class="navbar-item" href="https://github.com/DIRECTLab/MatsimAI">
+                <span class="icon"><i class="fa fa-github"></i></span>
+                <span>GitHub</span>
+            </a>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-body">
+        <div class="container is-max-desktop">
+            <div class="columns is-centered">
+                <div class="column has-text-centered">
+                    <h1 class="title is-1 publication-title">
+                        Towards Scalable Traffic Flow Digital Twins for Large Networks with MATSim
+                    </h1>
+
+                    <!-- Author List -->
+                    <div class="is-size-5 publication-authors">
+                        <span class="author-block"><a href="#">Isaac Peterson</a><sup>1</sup>,</span>
+                        <span class="author-block"><a href="#">Christopher Allred</a><sup>2</sup>,</span>
+                        <span class="author-block"><a href="#">Chandler Justice</a><sup>3</sup>,</span>
+                        <span class="author-block"><a href="#">Mario Harper</a><sup>4</sup></span>
+                        <div class="is-size-5 publication-authors">
+                            <span class="author-block"><sup>1,2,3,4</sup> Utah State University</span>
+                        </div>
+                    </div>
+
+                    <!-- Links to Paper and Code -->
+                    <div class="publication-links">
+                        <span class="link-block">
+                            <a href="https://arxiv.org/pdf/YOUR_PAPER_ID.pdf" class="external-link button is-normal is-rounded is-dark">
+                                <span class="icon"><i class="fa fa-file-pdf-o"></i></span>
+                                <span>Paper</span>
+                            </a>
+                        </span>
+                        <span class="link-block">
+                            <a href="https://github.com/DIRECTLab/MatsimAI" class="external-link button is-normal is-rounded is-dark">
+                                <span class="icon"><i class="fa fa-github"></i></span>
+                                <span>Code</span>
+                            </a>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Abstract Section -->
+<section class="section">
+    <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+            <div class="column is-four-fifths">
+                <h2 class="title is-3">Abstract</h2>
+                <div class="content has-text-justified">
+                    <p>
+                        Origin destination estimation based on recorded link flows is a well-studied problem in the literature. This work presents a framework for developing scalable traffic flow digital twins for large transportation networks. We implement a proven, gradient-based OD estimator using PyTorch and validate it within MATSim simulations involving millions of agents. Our open-source framework supports integration with modern AI models for further research. The code and datasets are available at <a href="https://github.com/DIRECTLab/MatsimAI">https://github.com/DIRECTLab/MatsimAI</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Figures Section -->
+<section class="section">
+    <div class="container is-max-desktop">
+        <h2 class="title is-3">Figures</h2>
+
+        <h3 class="title is-4">Network Clustering</h3>
+        <img src="./static/images/cluster_network.png" alt="Network Clustering" class="image">
+
+        <h3 class="title is-4">OD Estimation Error</h3>
+        <img src="./static/images/maad_clusters.png" alt="OD Estimation Error" class="image">
+
+        <h3 class="title is-4">Simulation Benchmark</h3>
+        <img src="./static/images/benchmark_results.png" alt="Simulation Benchmark" class="image">
+    </div>
+</section>
+
+<!-- BibTeX Citation -->
+<section class="section">
+    <div class="container is-max-desktop">
+        <h2 class="title">BibTeX</h2>
+        <pre><code>@inproceedings{peterson2024digitaltwins,
+  author    = {Isaac Peterson and Christopher Allred and Chandler Justice and Mario Harper},
+  title     = {Towards Scalable Traffic Flow Digital Twins for Large Networks with MATSim},
+  booktitle = {IEEE Conference},
+  year      = {2024},
+}</code></pre>
+    </div>
+</section>
+
+<!-- Footer Section -->
+<footer class="footer">
+    <div class="container has-text-centered">
+        <a class="icon-link" href="https://github.com/DIRECTLab/MatsimAI">
+            <i class="fa fa-github"></i>
+        </a>
+        <p>This website is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons License</a>.</p>
+        <p>Template adapted from <a href="https://github.com/nerfies/nerfies.github.io">Nerfies</a>.</p>
+    </div>
+</footer>
+
+</body>
+</html>
