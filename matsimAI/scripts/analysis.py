@@ -51,8 +51,8 @@ def plot_link_flows(dataset, last_iteration_path, last_iter, link_idx, title, sa
     hours = np.arange(len(unique_hours))
 
     plt.figure(figsize=(12, 6))
-    plt.bar(hours, df_link["MATSIM volumes"], width=bar_width, color="blue", label="Optimized MATSIM volumes")
-    plt.bar(hours + bar_width, df_link["Count volumes"], width=bar_width, color="red", label="UTA Count volumes")
+    plt.bar(hours, df_link["MATSIM volumes"], width=bar_width, color="blue", label="MATSIM volumes")
+    plt.bar(hours + bar_width, df_link["Count volumes"], width=bar_width, color="red", label="Count volumes")
     plt.xlabel("Hour")
     plt.ylabel("Volumes")
     plt.title(title + "\nLink Id: " + str(link))
