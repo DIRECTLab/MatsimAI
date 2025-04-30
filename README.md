@@ -11,12 +11,36 @@ cd matsimAI
 ./setup_project.sh
 ```
 
-This compiles the java code, and creates a new python environment in conda, to activate 
+This compiles the java code with maven, creates a new python environment in conda, and compiles the cython code to activate 
 the python environment run
 
 ```
 conda activate matsimAIenv
 ```
+
+## Running the Project
+
+The `/scripts` directory contains several example scripts for running the code in this repository:
+
+- `create_populations.sh`:  
+  Generates simple populations using a bimodal distribution. Used for generating benchmark results in the associated paper.
+
+- `osm2matsim.sh`:  
+  Converts a cleaned OSM network into a MATSim network and parses the `counts.csv` file into a `counts.xml` MATSim format.
+
+- `run_gradient_flow_examples.sh`:  
+  Clusters the graph and runs the ADAM optimizer using `network.xml` and `counts.xml`. Generates the traffic assignment matrix if it does not already exist.
+
+- `run_matsim_sims.sh`:  
+  Uses `best_plans.xml` from the optimizer to run a MATSim scenario and test the origin-destination plans.
+
+- `run_optimizer_and_matsim.sh`:  
+  Runs the optimizer and MATSim simulator sequentially. Suitable for overnight runs. Requires updating the MATSim `config.xml` with correct paths.
+
+- `run_analysis.sh`:  
+  Parses simulation and optimization results to produce figures and interactive HTML files for analysis.
+
+
 
 ## Getting a Real Network in MATSim
 
@@ -88,7 +112,7 @@ The cleaned `.osm` file can now be converted to a MATSim-compatible `.xml` file.
 We've modified the [osm2matsim converter](https://github.com/gustavocovas/osm2matsim), to be able to add sensors while parsing
 the network. Its located at `src/main/java/org/matsim/osm2matsim/GetNetworkAndSensors.java`. The script provided at `/scripts/osm2matsim.sh` provides an example on its usage.
 
-# matsim-example-project
+# matsim-example-project - from original repository
 
 A small example of how to use MATSim as a library.
 
