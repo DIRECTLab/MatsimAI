@@ -37,7 +37,7 @@ def plot_tensor_flows(dataset, predicted_flows, target_flows, link_idx, title, s
 
     plt.figure(figsize=(12, 6))
     plt.bar(hours, pred_link_flows, width=bar_width, color="blue", label="Predicted flows")
-    plt.bar(hours + bar_width, target_link_flows, width=bar_width, color="red", label="Target flows")
+    plt.bar(hours + bar_width, target_link_flows, width=bar_width, color="red", label="Count Volumes")
     plt.xlabel("Hour")
     plt.ylabel("Flows")
     plt.title(title + "\nLink Id: " + str(link_id))

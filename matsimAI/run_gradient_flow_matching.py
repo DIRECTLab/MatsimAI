@@ -30,6 +30,8 @@ def main(args):
         for sensor_idx in dataset.sensor_idxs:
             f.write(f"{dataset.edge_mapping.inv[sensor_idx]},")
     
+    sensor_idxs = dataset.sensor_idxs
+    
     with open(Path(save_path, "args.txt"), "w") as f:
         for key, val in args.__dict__.items():
             f.write(f"{key}:{val}\n")
@@ -47,7 +49,6 @@ def main(args):
 
     optimizer = torch.optim.Adam(parameters, lr=0.001)
     pbar = tqdm(range(args.training_steps))
-    sensor_idxs = dataset.sensor_idxs
     target_size = TARGET[sensor_idxs].numel()
 
     best_loss = torch.inf
