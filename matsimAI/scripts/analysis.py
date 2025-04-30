@@ -20,6 +20,7 @@ from bokeh.models import ColumnDataSource, LinearColorMapper, ColorBar, HoverToo
 from bokeh.layouts import row, column
 from bokeh.io import output_notebook
 from bokeh.palettes import RdYlGn11
+from bokeh.transform import linear_cmap
 
 from matsimAI.flowsim_dataset import FlowSimDataset
 
@@ -189,6 +190,7 @@ def create_html_plot(dataset, link_flows, hour_count, title, output_html_path="s
 
     # Sensor edges (colored)
     s_x0s, s_y0s, s_x1s, s_y1s = [], [], [], []
+    mid_x, mid_y = [], []
     for (u, v, data) in sensor_edges:
         x0, y0 = pos[u]
         x1, y1 = pos[v]
@@ -196,13 +198,15 @@ def create_html_plot(dataset, link_flows, hour_count, title, output_html_path="s
         s_y0s.append(y0)
         s_x1s.append(x1)
         s_y1s.append(y1)
-        
+        mid_x.append((x0 + x1) / 2)
+        mid_y.append((y0 + y1) / 2)
         weight_all_hours.append(data["Absolute Difference"])
         pred_all_hours.append(data["Predicted Flow"])
         target_all_hours.append(data["Target Flow"])
 
     sensors_edge_source = ColumnDataSource(data=dict(
         x0=s_x0s, y0=s_y0s, x1=s_x1s, y1=s_y1s,
+        mid_x=mid_x, mid_y=mid_y,
         weight=[w[0] for w in weight_all_hours],
         predicted=[p[0] for p in pred_all_hours],
         target=[t[0] for t in target_all_hours],
@@ -231,7 +235,8 @@ def create_html_plot(dataset, link_flows, hour_count, title, output_html_path="s
     # Loop through each hour to create a color mapper per hour
     for hour_idx in range(hour_count):
         # Color mapper for each hour
-        color_mapper = LinearColorMapper(palette=RdYlGn11, low=0, high=max_abs_diff_per_hour[hour_idx])
+        # color_mapper = LinearColorMapper(palette=RdYlGn11, low=0, high=max_abs_diff_per_hour[hour_idx])
+        color_mapper = LinearColorMapper(palette=RdYlGn11, low=0, high=max(max_abs_diff_per_hour))
 
         # Draw sensor edges with color
         plot.segment('x0', 'y0', 'x1', 'y1', source=sensors_edge_source,
@@ -244,7 +249,7 @@ def create_html_plot(dataset, link_flows, hour_count, title, output_html_path="s
     # Draw nodes
     node_x = [pos[i][0] for i in pos]
     node_y = [pos[i][1] for i in pos]
-    plot.scatter(node_x, node_y, size=.001, color="black", alpha=0.2)
+    plot.scatter(node_x, node_y, size=.01, color="black", alpha=0.1)
 
     # Hover tool
     tooltips = [("Abs Diff", "@weight"), ("Predicted", "@predicted"), ("Target", "@target")]
@@ -255,21 +260,90 @@ def create_html_plot(dataset, link_flows, hour_count, title, output_html_path="s
     color_bar = ColorBar(color_mapper=color_mapper, location=(0, 0))
     plot.add_layout(color_bar, 'right')
 
+
+    # === Histogram Setup ===
+    bin_edges = np.linspace(0, max(max_abs_diff_per_hour), 21)
+    bin_centers = [(bin_edges[i] + bin_edges[i+1])/2 for i in range(len(bin_edges)-1)]
+    hist_source = ColumnDataSource(data=dict(
+        top=[0]*20,
+        bin_center=bin_centers
+    ))
+
+    hist_plot = figure(title="Visible Edge Flow Difference Histogram", width=300, height=600, y_range=(0, max(max_abs_diff_per_hour)),
+                       toolbar_location=None, tools="")
+    hist_plot.hbar(y='bin_center', height=(bin_edges[1] - bin_edges[0]) * 0.8, right='top', left=0, source=hist_source,
+                   fill_color=linear_cmap('bin_center', RdYlGn11, low=0, high=max(max_abs_diff_per_hour)), line_color="white")
+    hist_plot.xaxis.axis_label = "Count"
+    hist_plot.yaxis.axis_label = "Abs Diff"
+    hist_plot.ygrid.grid_line_color = None
+
     # Dropdown for hour selection
     hour_selector = Select(title="Select Hour", value="0", options=[str(i) for i in range(hour_count)])
-    callback = CustomJS(args=dict(source=sensors_edge_source, hour_selector=hour_selector), code="""
+
+    # === JS Callback ===
+    callback = CustomJS(args=dict(
+        source=sensors_edge_source,
+        hist_source=hist_source,
+        x_range=plot.x_range,
+        y_range=plot.y_range,
+        hour_selector=hour_selector
+    ), code="""
         const hour = parseInt(hour_selector.value);
-        const data = source.data;
-        for (let i = 0; i < data['weight_all_hours'].length; i++) {
-            data['weight'][i] = data['weight_all_hours'][i][hour];
-            data['predicted'][i] = data['predicted_all_hours'][i][hour];
-            data['target'][i] = data['target_all_hours'][i][hour];
+        const x0 = x_range.start;
+        const x1 = x_range.end;
+        const y0 = y_range.start;
+        const y1 = y_range.end;
+
+        const mids_x = source.data['mid_x'];
+        const mids_y = source.data['mid_y'];
+        const weights_all = source.data['weight_all_hours'];
+        const preds_all = source.data['predicted_all_hours'];
+        const targets_all = source.data['target_all_hours'];
+
+        const weights = [];
+        for (let i = 0; i < mids_x.length; i++) {
+            if (mids_x[i] >= x0 && mids_x[i] <= x1 && mids_y[i] >= y0 && mids_y[i] <= y1) {
+                weights.push(weights_all[i][hour]);
+            }
+            source.data['weight'][i] = weights_all[i][hour];
+            source.data['predicted'][i] = preds_all[i][hour];
+            source.data['target'][i] = targets_all[i][hour];
         }
+
+        const bin_count = 20;
+        const bin_min = 0;
+        const bin_max = Math.max(...weights_all.flat());
+        const bin_size = (bin_max - bin_min) / bin_count;
+
+        const hist = Array(bin_count).fill(0);
+        const bin_centers = [];
+        for (let i = 0; i < bin_count; i++) {
+            bin_centers.push(bin_min + bin_size * (i + 0.5));
+        }
+
+        for (let i = 0; i < weights.length; i++) {
+            const w = weights[i];
+            const bin = Math.floor((w - bin_min) / bin_size);
+            if (bin >= 0 && bin < bin_count) {
+                hist[bin]++;
+            }
+        }
+
+        hist_source.data['top'] = hist;
+        hist_source.data['bin_center'] = bin_centers;
+
         source.change.emit();
+        hist_source.change.emit();
     """)
+
+    # Link all events to callback
+    plot.x_range.js_on_change("start", callback)
+    plot.x_range.js_on_change("end", callback)
+    plot.y_range.js_on_change("start", callback)
+    plot.y_range.js_on_change("end", callback)
     hour_selector.js_on_change('value', callback)
 
-    layout = column(row(plot, hour_selector))
+    layout = row(plot, hist_plot, column(hour_selector))
     save(layout, filename=output_html_path, title=title)
 
 def build_abs_diff_graph(dataset, link_flows, sensor_idxs, target_flows, hour, title, save_path):
@@ -374,7 +448,9 @@ def main(args):
     target_graph = dataset.target_graph
     sensor_idxs = dataset.sensor_idxs
 
-    flows = torch.load(results_path / "best_flows.pt")
+    # flows = torch.load(results_path / "best_flows.pt")
+    device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+    flows = torch.load(results_path / "best_flows.pt", map_location=device)
     link_flows = flows["LinkFlows"].to("cpu")
     target_flows = target_graph.edge_attr
 
