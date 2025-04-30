@@ -143,7 +143,8 @@ def create_html_plot(dataset, link_flows, hour_count, title, output_html_path="s
         u, v = dataset.target_graph.edge_index[0][i].item(), dataset.target_graph.edge_index[1][i].item()
         
         if i in sensor_idxs:
-            edge_attrs = {"Absolute Difference": [], "Predicted Flow": [], "Target Flow": []}
+            edge_attrs = {"Link id":[], "Absolute Difference": [], "Predicted Flow": [], "Target Flow": []}
+            link_id = dataset.edge_mapping.inv[i]
 
             for hour_idx in range(hour_count):
                 if isinstance(link_flows, torch.Tensor):
@@ -159,6 +160,7 @@ def create_html_plot(dataset, link_flows, hour_count, title, output_html_path="s
 
                 abs_diff = abs(target_flow - pred_flow)
 
+                edge_attrs["Link id"].append(link_id)
                 edge_attrs["Absolute Difference"].append(abs_diff)
                 edge_attrs["Predicted Flow"].append(pred_flow)
                 edge_attrs["Target Flow"].append(target_flow)
@@ -178,7 +180,7 @@ def create_html_plot(dataset, link_flows, hour_count, title, output_html_path="s
     # Build plot data
     sensor_edges = []
     normal_edges = []
-    weight_all_hours, pred_all_hours, target_all_hours = [], [], []
+    weight_all_hours, pred_all_hours, target_all_hours, link_id_all_hours = [], [], [], []
 
     for (u, v, data) in tqdm(G_sensor.edges(data=True), desc="Processing Sensor Edges"):
         if "Absolute Difference" in data:
@@ -201,6 +203,7 @@ def create_html_plot(dataset, link_flows, hour_count, title, output_html_path="s
         weight_all_hours.append(data["Absolute Difference"])
         pred_all_hours.append(data["Predicted Flow"])
         target_all_hours.append(data["Target Flow"])
+        link_id_all_hours.append(data["Link id"])
 
     sensors_edge_source = ColumnDataSource(data=dict(
         x0=s_x0s, y0=s_y0s, x1=s_x1s, y1=s_y1s,
@@ -208,9 +211,11 @@ def create_html_plot(dataset, link_flows, hour_count, title, output_html_path="s
         weight=[w[0] for w in weight_all_hours],
         predicted=[p[0] for p in pred_all_hours],
         target=[t[0] for t in target_all_hours],
+        link_id=[l[0] for l in link_id_all_hours],
         weight_all_hours=weight_all_hours,
         predicted_all_hours=pred_all_hours,
         target_all_hours=target_all_hours,
+        link_id_all_hours=link_id_all_hours,
     ))
 
     # Normal edges (black)
@@ -250,7 +255,7 @@ def create_html_plot(dataset, link_flows, hour_count, title, output_html_path="s
     plot.scatter(node_x, node_y, size=.01, color="black", alpha=0.1)
 
     # Hover tool
-    tooltips = [("Abs Diff", "@weight"), ("Predicted", "@predicted"), ("Target", "@target")]
+    tooltips = [("Link ID", "@link_id"),("Abs Diff", "@weight"), ("Predicted", "@predicted"), ("Target", "@target")]
     hover = HoverTool(tooltips=tooltips)
     plot.add_tools(hover)
 
@@ -297,6 +302,7 @@ def create_html_plot(dataset, link_flows, hour_count, title, output_html_path="s
         const weights_all = source.data['weight_all_hours'];
         const preds_all = source.data['predicted_all_hours'];
         const targets_all = source.data['target_all_hours'];
+        const link_ids_all = source.data['link_id_all_hours'];
 
         const weights = [];
         for (let i = 0; i < mids_x.length; i++) {
@@ -306,6 +312,7 @@ def create_html_plot(dataset, link_flows, hour_count, title, output_html_path="s
             source.data['weight'][i] = weights_all[i][hour];
             source.data['predicted'][i] = preds_all[i][hour];
             source.data['target'][i] = targets_all[i][hour];
+            source.data['link_id'][i] = link_ids_all[i][hour];
         }
 
         const bin_count = 20;
