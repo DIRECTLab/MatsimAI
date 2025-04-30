@@ -3,6 +3,9 @@ conda activate matsimAIenv
 
 cd ..
 
+export MAVEN_OPTS="-Xmx61G"
+
+
 # python3 -m matsimAI.run_gradient_flow_matching \
 # "./cluster_results/results" \
 # "./scenarios/cluster_scenarios/utah_10c/utahnetwork.xml" \
@@ -51,14 +54,14 @@ cd ..
 
 # mvn exec:java -Dexec.mainClass="org.matsim.run.RunMatsim" -Dexec.args="./scenarios/cluster_scenarios/utah_200c/utahconfig.xml"
 
-python3 -m matsimAI.run_gradient_flow_matching \
-"./cluster_results/results" \
-"./scenarios/cluster_scenarios/utah_500c/utahnetwork.xml" \
-"./scenarios/cluster_scenarios/utah_500c/utahcounts.xml" \
-"--num_clusters" "500" \
-"--training_steps" "1_000_000" \
-"--log_interval" "1_000" \
-"--save_interval" "-1" \
-"--best_plans_save_path" "./scenarios/cluster_scenarios/utah_500c"
+# python3 -m matsimAI.run_gradient_flow_matching \
+# "./cluster_results/results" \
+# "./scenarios/cluster_scenarios/utah_500c/utahnetwork.xml" \
+# "./scenarios/cluster_scenarios/utah_500c/utahcounts.xml" \
+# "--num_clusters" "500" \
+# "--training_steps" "1_000_000" \
+# "--log_interval" "1_000" \
+# "--save_interval" "-1" \
+# "--best_plans_save_path" "./scenarios/cluster_scenarios/utah_500c"
 
 mvn exec:java -Dexec.mainClass="org.matsim.run.RunMatsim" -Dexec.args="./scenarios/cluster_scenarios/utah_500c/utahconfig.xml"
