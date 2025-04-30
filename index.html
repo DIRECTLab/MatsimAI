@@ -5,7 +5,7 @@
     <meta name="keywords" content="Digital Twin, MATSim, Traffic Simulation, OD Estimation, AI, Traffic Flow">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <title>Scalable Traffic Flow Digital Twins with MATSim</title>
+    <title>A Deep Learning Framework for Large-Scale Traffic Flow Digital Twin Development with MATSim</title>
 
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
@@ -47,7 +47,7 @@
             <div class="columns is-centered">
                 <div class="column has-text-centered">
                     <h1 class="title is-1 publication-title">
-                        Towards Scalable Traffic Flow Digital Twins for Large Networks with MATSim
+                        A Deep Learning Framework for Large-Scale Traffic Flow Digital Twin Development with MATSim
                     </h1>
 
                     <!-- Author List -->
@@ -90,8 +90,8 @@
                 <h2 class="title is-3">Abstract</h2>
                 <div class="content has-text-justified">
                     <p>
-                        Origin destination estimation based on recorded link flows is a well-studied problem in the literature. This work presents a framework for developing scalable traffic flow digital twins for large transportation networks. We implement a proven, gradient-based OD estimator using PyTorch and validate it within MATSim simulations involving millions of agents. Our open-source framework supports integration with modern AI models for further research. The code and datasets are available at <a href="https://github.com/DIRECTLab/MatsimAI">https://github.com/DIRECTLab/MatsimAI</a>.
-                    </p>
+                        We present a novel framework that bridges the gap between deep learning-based <abbr title="Origin-Destination">OD</abbr> traffic flow models and realistic, large-scale simulation environments for the development and validation of digital twins. Leveraging the PyTorch deep learning library, we implement a gradient-based <abbr title="Origin-Destination">OD</abbr> estimation model and evaluate its performance on the Utah transportation network. Our simulation encompasses 3,275 nodes and 3,785 edges, modeling over 3 million agents using the <abbr title="Multi-Agent Transport Simulation">MATSim</abbr> platform. All code and datasets associated with this work are publicly available at: <a href="https://directlab.github.io/MatsimAI/" target="_blank" rel="noopener noreferrer">https://directlab.github.io/MatsimAI/</a>.
+                      </p>
                 </div>
             </div>
         </div>
@@ -100,49 +100,70 @@
 
 <!-- Figures Section -->
 <section class="section">
-    <div class="container is-max-desktop">
+    <div class="container is-wider">
         <h2 class="title is-3">Figures</h2>
 
-        <h3 class="title is-4">Network Clustering</h3>
-        <img src="./static/images/cluster_network.png" alt="Network Clustering" class="image">
+        <div class="content mb-6">
+            <h3 class="title is-4">Software Framework</h3>
+            <figure class="image is-centered mb-4">
+                <img src="./static/images/software2.png" alt="Software Framework">
+            </figure>
+            <p>
+                Overview of the digital twin construction pipeline for large-scale traffic network simulations. The left branch shows the preprocessing of real-world geographic data, beginning with network extraction from OpenStreetMaps via JOSM, followed by data cleaning, conversion to MATSim format, and parsing into tensor representations. These are used to derive a graph structure Ĝ(V,E), which is clustered using K-means to form the clustered graph G*(C,E) and time-dependent subgraphs Gₜ(V,E), integrating UDOT traffic flows. The center illustrates the application of a traffic assignment matrix algorithm to infer origin-destination (OD) matrices. The right branch shows the iterative OD estimation process, where weights W are optimized using the ADAM optimizer to generate MATSim plans.
+            </p>
 
-        <h3 class="title is-4">OD Estimation Error</h3>
-        <img src="./static/images/maad_clusters.png" alt="OD Estimation Error" class="image">
-
-        <h3 class="title is-4">Simulation Benchmark</h3>
-        <img src="./static/images/benchmark_results.png" alt="Simulation Benchmark" class="image">
-
-        <section class="section">
-            <div class="container is-max-desktop">
-                <h2 class="title is-3"> Visualization</h2>
-                <div class="bokeh-embed" style="width: 100%; height: 800px; overflow: hidden;">
-                    <iframe 
-                        src="./static/sensor_edges_graph.html" 
-                        width="100%" 
-                        height="100%" 
-                        style="border: none; overflow: hidden;" 
-                        scrolling="no">
-                    </iframe>
-                </div>
-            </div>
-        </section>
-
+        </div>
         
+        <h3 class="title is-4">ADAM Optimization Results</h3>
+        <figure class="image is-centered mb-4" style="width: 40%;">
+            <img src="./static/images/_maad_clusters.png" alt="Optimization Results">
+        </figure>
+        <p class="has-text-centered">
+            The mean average absolute difference between the
+            predicted flows and the actual flows as recorded by the UDOT
+            sensors.
+        </p>
+        <div style="height: 100px;"></div>
+        <div style="text-align: center;">
+            <h3 class="title is-4">ADAM Optimization Results (Interactive)</h3>
+            <div style="display: flex; justify-content: center;">
+                <iframe 
+                    src="./static/gradient_graph.html" 
+                    width="90%" 
+                    height="600" 
+                    style="border: none;" 
+                    scrolling="no">
+                </iframe>
+            </div>
+        
+            <h3 class="title is-4">Simulation Results (Interactive)</h3>
+            <div style="display: flex; justify-content: center;">
+                <iframe 
+                    src="./static/simulation_graph.html" 
+                    width="90%" 
+                    height="600" 
+                    style="border: none;" 
+                    scrolling="no">
+                </iframe>
+            </div>
+        </div>
     </div>
+
+
+
 </section>
 
+
 <!-- BibTeX Citation -->
-<section class="section">
-    <div class="container is-max-desktop">
+<div class="container is-max-desktop">
         <h2 class="title">BibTeX</h2>
         <pre><code>@inproceedings{peterson2024digitaltwins,
   author    = {Isaac Peterson and Christopher Allred and Chandler Justice and Mario Harper},
-  title     = {Towards Scalable Traffic Flow Digital Twins for Large Networks with MATSim},
+  title     = {A Deep Learning Framework for Large-Scale Traffic Flow Digital Twin Development with MATSim},
   booktitle = {IEEE Conference},
   year      = {2024},
 }</code></pre>
-    </div>
-</section>
+</div>
 
 <!-- Footer Section -->
 <footer class="footer">
