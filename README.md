@@ -19,6 +19,7 @@ conda activate matsimAIenv
 ```
 
 ## Running the Project
+In order to run all these scripts with working data, you can install that [here](https://usu.box.com/s/w6ck5ook1q3y6o3aa9u82rif13f835mu). Then make sure that the scripts point to the correct directories.
 
 The `/scripts` directory contains several example scripts for running the code in this repository:
 
