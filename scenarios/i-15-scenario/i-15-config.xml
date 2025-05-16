@@ -1,4 +1,4 @@
-<?xml version="1.0" ?>
+<?xml version="1.0"?>
 <!DOCTYPE config SYSTEM "http://www.matsim.org/files/dtd/config_v2.dtd">
 <config>
     <module name="global">
@@ -18,10 +18,10 @@
         <param name="inputCountsFile" value="i-15-counts.xml" />
         <param name="writeCountsInterval" value="1" />
         <param name="averageCountsOverIterations" value="1" />
-    </module>
+    <param name="countsScaleFactor" value="5" /></module>
 
     <module name="controller">
-        <param name="outputDirectory" value="./output" />
+        <param name="outputDirectory" value="./i-15-output" />
         <param name="firstIteration" value="0" />
         <param name="lastIteration" value="100" />
         <param name="eventsFileFormat" value="xml" />
@@ -49,7 +49,7 @@
         <param name="marginalUtilityOfMoney" value="0" />
 
         <parameterset type="modeParams">
-            <param name="mode" value="car"/>
+            <param name="mode" value="car" />
             <param name="marginalUtilityOfTraveling_util_hr" value="-6.0" />
         </parameterset>
 
