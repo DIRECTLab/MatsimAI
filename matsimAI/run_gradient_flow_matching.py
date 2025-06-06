@@ -19,9 +19,6 @@ def main(args):
     save_path = Path(output_path, f"{unique_time_string}_nclusters_{args.num_clusters}_{network_name}")
     tensorboard_path = Path(save_path, "logs")
     writer = SummaryWriter(tensorboard_path)
-
-
-    os.makedirs(tensorboard_path)
     
     tree = ET.parse(args.config_path)
     root = tree.getroot()
